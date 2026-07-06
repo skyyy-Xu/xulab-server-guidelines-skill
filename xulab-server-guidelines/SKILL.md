@@ -1,6 +1,6 @@
 ---
 name: xulab-server-guidelines
-description: Xu Lab服务器使用规范和准则。当AI在服务器上进行任何操作时触发，包括：编写sbatch脚本、申请计算资源、管理存储空间、安装软件、清理数据等。确保所有操作符合实验室规范，提高资源使用效率。
+description: Xu Lab服务器使用规范和准则。当AI在服务器上进行任何操作时触发，包括：SSH登录、端口转发、编写sbatch脚本、申请计算资源、管理存储空间、安装软件、清理数据等。确保所有操作符合实验室规范，提高资源使用效率并避免残留会话。
 ---
 
 # Xu Lab Server Guidelines
@@ -92,6 +92,31 @@ description: Xu Lab服务器使用规范和准则。当AI在服务器上进行�
 - 文献管理推荐使用Zotero、EndNote等工具
 - 尽可能使用在线文档，推荐用Google Drive客户端同步文件
 
+### 7. SSH会话与自动化连接规范
+
+#### 基本原则
+- SSH 是受控资源；服务器操作必须少连接、合并检查、显式退出。
+- 主 agent 同一时间最多保留 1 个交互式 SSH 会话。
+- 网页预览最多额外保留 1 个端口转发会话，例如 `ssh -L 8090:127.0.0.1:8090 ...`。
+- subagent 默认不得直接 SSH 到 xulab；服务器操作由主 agent 统一提交 Slurm 或统一做一次合并检查。
+- 禁止 heartbeat/subagent 高频 SSH 轮询；长任务状态由 Slurm 日志、结果文件和用户手动唤醒检查。
+
+#### 退出规则
+- 普通交互 SSH 结束时必须执行 `exit` 或 `Ctrl-D`。
+- 从登录节点进入计算节点时，必须逐层 `exit`，先退出计算节点，再退出登录节点。
+- 端口转发用完必须 `exit` 或 `Ctrl-C` 关闭。
+- 非交互式 SSH 命令必须执行完自动退出，不使用 `tail -f`、长时间 `watch` 或无限循环占住会话。
+
+#### 长任务规则
+- 长任务只通过 Slurm 提交，不靠 SSH 会话维持。
+- 提交后必须记录 `RUN_ID`、Slurm job id、日志路径、输出目录和预计唤醒时间。
+- 状态检查必须合并为一次 SSH 内的只读检查，不拆成多轮频繁连接。
+
+#### 异常处理
+- 如发现本人名下 `sshd-session` 异常增多，立即停止新的服务器连接。
+- 先列明细确认用途，不直接全杀；不要误杀当前登录、老师排查会话或 Slurm 作业。
+- 参见 `references/ssh-session-rules.md`。
+
 ## Quick Reference
 
 ### 常用命令
@@ -121,6 +146,7 @@ pip cache purge
 - `storage-rules.md`: 存储管理详细规则
 - `job-submission.md`: 作业提交规范
 - `data-cleaning.md`: 数据清理详细指南
+- `ssh-session-rules.md`: SSH会话、端口转发和自动化连接规范
 
 ### scripts/
 常用脚本和工具。
