@@ -2,15 +2,23 @@
 
 ## 节点使用规则
 
-### 可用节点
-- **comput1**: 有GPU，适合GPU计算任务
-- **test**: 测试节点，用于测试脚本和小规模任务
-- **normal**: 默认分区，用于一般计算任务
+### 分区设置规范（2026-11-12更新）
 
-### 分区设置规范
-- **重要**: 使用 `--partition=normal`（不是 `cpu`）
-- GPU任务使用 `--partition=comput1`
-- 测试任务使用 `--partition=test`
+当前分区归类见[主规范的分区与节点表](../SKILL.md#分区与节点2026-11-12实查用户已确认可使用cpu)。`normal`和`cpu`均可用于一般计算；不要再将`cpu`视为错误分区，也不要把`normal`固定称为服务器默认分区。
+
+提交前将以下只读检查合并到一次SSH中，按实际结果选择分区：
+
+```bash
+sinfo -o '%P %a %l %D %N'
+scontrol show partition normal
+scontrol show partition cpu
+# 仅在需要绑定节点时检查该节点，例如：
+scontrol show node node03
+```
+
+当前node03的本地检查点接续使用`--partition=cpu --nodelist=node03`；node01/node02对应`normal`。无需固定节点时，按可用资源与任务需求选择分区，不无故绑定节点。
+
+队列中的旧作业可能仍记录原来的分区名称；这不证明目标节点仍接受该分区的新作业。不得仅为统一分区标签取消、重排或重新启动正常作业。GPU或测试任务先核实实际分区和资源，旧示例中的`comput1`、`test`不是已核验的当前配置。
 
 ### 登陆节点限制
 - 登陆节点一般不执行需要长时间运行的任务
@@ -36,6 +44,8 @@
 ### 脚本模板
 
 #### 基本模板
+以下`normal`仅为示例；使用node03/node04时按当前配置改为`cpu`，具体资源及运行时长遵守项目和用户要求。
+
 ```bash
 #!/bin/bash
 #SBATCH -J job_name
@@ -50,6 +60,8 @@
 ```
 
 #### GPU任务模板
+`comput1`为旧示例名称，须在确认当前GPU分区后替换或使用。
+
 ```bash
 #!/bin/bash
 #SBATCH -J gpu_job
@@ -70,14 +82,14 @@
 - `-J`: 作业名称
 - `-o`: 标准输出文件
 - `-e`: 标准错误文件
-- `-p`: 分区/队列（使用 `normal`，不是 `cpu`）
+- `-p`: 分区/队列，按目标节点的当前归属选择`normal`或`cpu`；其他分区先核实。
 - `-n`: CPU核心数
 - `--mem`: 内存大小
 - `-t`: 运行时间限制
 
 #### GPU相关参数
 - `--gres=gpu:1`: 申请1个GPU
-- `-p comput1`: 使用GPU分区
+- `-p comput1`: 旧GPU分区示例，实际名称以当前配置为准。
 
 ## 临时文件处理
 
